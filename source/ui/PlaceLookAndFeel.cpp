@@ -3,10 +3,7 @@
 PlaceLookAndFeel::PlaceLookAndFeel()
 {
     setColour (juce::Label::textColourId, textPrimary());
-    setColour (juce::ComboBox::backgroundColourId, juce::Colours::transparentBlack);
-    setColour (juce::ComboBox::outlineColourId, juce::Colours::transparentBlack);
-    setColour (juce::ComboBox::textColourId, textPrimary());
-    setColour (juce::Slider::backgroundColourId, juce::Colours::transparentBlack);
+    setColour (juce::Slider::backgroundColourId, knobTrack());
     setColour (juce::Slider::thumbColourId, accent());
     setColour (juce::Slider::trackColourId, accent());
 }
