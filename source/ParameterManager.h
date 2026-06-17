@@ -68,7 +68,7 @@ public:
     float getHighPassFrequency() const noexcept
     {
         float normalized = getSideBassRemoverNormalized();
-        return 20.0f + normalized * 160.0f;
+        return 20.0f + normalized * 70.0f;
     }
 
 private:

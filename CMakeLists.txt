@@ -37,6 +37,7 @@ target_sources(PLACE
         source/ui/PlaceLookAndFeel.cpp
         source/ui/RotaryKnob.cpp
         source/ui/ModeSelector.cpp
+        source/ui/StereoFieldVisualizer.cpp
 )
 
 target_include_directories(PLACE

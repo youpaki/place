@@ -123,7 +123,7 @@ void PlaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     if (bassActive)
     {
-        float hpFreq = 20.0f + smoothedBass * 160.0f;
+        float hpFreq = 20.0f + smoothedBass * 70.0f;
         midHighPass.process (sideChannel, numSamples, hpFreq);
     }
 

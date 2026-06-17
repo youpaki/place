@@ -4,6 +4,7 @@
 #include "ui/PlaceLookAndFeel.h"
 #include "ui/RotaryKnob.h"
 #include "ui/ModeSelector.h"
+#include "ui/StereoFieldVisualizer.h"
 
 class PlaceAudioProcessorEditor : public juce::AudioProcessorEditor,
                                   private juce::Timer
@@ -19,9 +20,10 @@ private:
     PlaceAudioProcessor& processorRef;
     PlaceLookAndFeel lookAndFeel;
 
-    RotaryKnob sizeMaximizerKnob;
-    RotaryKnob sideBassRemoverKnob;
+    PremiumKnob sizeMaximizerKnob;
+    PremiumKnob sideBassRemoverKnob;
     ModeSelector modeSelector;
+    StereoFieldVisualizer stereoField;
 
     juce::Label scIndicator;
 
@@ -29,10 +31,20 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> bassAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modeAttachment;
 
-    void timerCallback() override;
+    juce::Image noiseTexture;
 
-    static constexpr int defaultWidth = 500;
-    static constexpr int defaultHeight = 400;
+    void timerCallback() override;
+    void generateNoiseTexture();
+    void paintBackground (juce::Graphics& g);
+    void paintBloom (juce::Graphics& g);
+    void paintVignette (juce::Graphics& g);
+    void paintGlassBorder (juce::Graphics& g);
+    void paintSCIndicator (juce::Graphics& g);
+
+    float scPulsePhase = 0.0f;
+
+    static constexpr int defaultWidth = 640;
+    static constexpr int defaultHeight = 360;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaceAudioProcessorEditor)
 };

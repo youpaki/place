@@ -10,6 +10,7 @@ public:
 
     juce::ComboBox& getComboBox() { return comboBox; }
 
+    void paint (juce::Graphics& g) override;
     void resized() override;
 
 private:

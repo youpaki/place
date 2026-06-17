@@ -7,25 +7,23 @@ class PlaceLookAndFeel : public juce::LookAndFeel_V4
 public:
     PlaceLookAndFeel();
 
-    void drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height,
-                           float sliderPosProportional, float rotaryStartAngle,
-                           float rotaryEndAngle, juce::Slider& slider) override;
-
-    void drawComboBox (juce::Graphics& g, int width, int height, bool isButtonDown,
-                       int buttonX, int buttonY, int buttonW, int buttonH,
-                       juce::ComboBox& box) override;
-
-    void drawPopupMenuBackground (juce::Graphics& g, int width, int height) override;
-
-    juce::Font getComboBoxFont (juce::ComboBox&) override;
     juce::Font getLabelFont (juce::Label&) override;
 
-private:
-    juce::Colour bgColour { 0xff1a0a2e };
-    juce::Colour accentColour { 0xff9b59b6 };
-    juce::Colour knobTrackColour { 0xff2d1b4e };
-    juce::Colour knobFillColour { 0xff9b59b6 };
-    juce::Colour textColour { 0xffecf0f1 };
+    static juce::Colour bgTop() { return juce::Colour (0xff31204D); }
+    static juce::Colour bgMid() { return juce::Colour (0xff24183B); }
+    static juce::Colour bgBottom() { return juce::Colour (0xff161022); }
 
+    static juce::Colour accent() { return juce::Colour (0xff9b6dff); }
+    static juce::Colour accentGlow() { return juce::Colour (0x409b6dff); }
+    static juce::Colour cyanGlow() { return juce::Colour (0xff00e5ff); }
+
+    static juce::Colour textPrimary() { return juce::Colour (0xffe8e0f0); }
+    static juce::Colour textSecondary() { return juce::Colour (0x80e8e0f0); }
+    static juce::Colour textDim() { return juce::Colour (0x40e8e0f0); }
+
+    static juce::Colour glassBorder() { return juce::Colour (0x18ffffff); }
+    static juce::Colour glassFill() { return juce::Colour (0x0affffff); }
+
+private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaceLookAndFeel)
 };
