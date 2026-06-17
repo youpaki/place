@@ -31,25 +31,40 @@ jobs:
           name: PLACE-VST3-Windows
           path: build/PLACE_artefacts/Release/VST3/PLACE.vst3
 
+      - name: Build installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/setup.iss
+        shell: pwsh
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PLACE-Installer
+          path: installer/output/PLACE-v1.0-Setup.exe
+
   release:
     needs: build-windows
     runs-on: windows-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download artifacts
+      - name: Download VST3
         uses: actions/download-artifact@v4
         with:
           name: PLACE-VST3-Windows
-          path: artifacts/
+          path: artifacts/vst3/
+
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: PLACE-Installer
+          path: artifacts/installer/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**
+          files: |
+            artifacts/installer/PLACE-v1.0-Setup.exe
           generate_release_notes: true
           draft: false
           prerelease: false
