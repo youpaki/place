@@ -27,8 +27,11 @@ PlaceAudioProcessorEditor::PlaceAudioProcessorEditor (PlaceAudioProcessor& p)
     bassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
         processorRef.getAPVTS(), ParamIDs::SIDE_BASS_REMOVER, sideBassRemoverKnob.getSlider());
 
-    modeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
-        processorRef.getAPVTS(), ParamIDs::MODE, modeSelector.getComboBox());
+    modeSelector.onModeChanged = [this](int mode)
+    {
+        if (auto* param = processorRef.getAPVTS().getParameter (ParamIDs::MODE))
+            param->setValueNotifyingHost (static_cast<float> (mode));
+    };
 
     generateNoiseTexture();
     setSize (defaultWidth, defaultHeight);
@@ -119,7 +122,7 @@ void PlaceAudioProcessorEditor::generateNoiseTexture()
         for (int x = 0; x < 256; ++x)
         {
             float noise = static_cast<float> (juce::Random::getSystemRandom().nextInt (256)) / 255.0f;
-            g.setColour (juce::Colours::white.withAlpha (noise * 0.03f));
+            g.setColour (juce::Colours::white.withAlpha (noise * 0.015f));
             g.fillRect (x, y, 1, 1);
         }
     }
@@ -145,10 +148,10 @@ void PlaceAudioProcessorEditor::paintBloom (juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat();
     auto centre = bounds.getCentre();
 
-    for (int i = 8; i >= 0; --i)
+    for (int i = 5; i >= 0; --i)
     {
-        float alpha = 0.02f * (1.0f - static_cast<float> (i) / 9.0f);
-        float radius = 120.0f + static_cast<float> (i) * 30.0f;
+        float alpha = 0.012f * (1.0f - static_cast<float> (i) / 6.0f);
+        float radius = 150.0f + static_cast<float> (i) * 20.0f;
 
         g.setColour (PlaceLookAndFeel::accent().withAlpha (alpha));
         g.fillEllipse (centre.x - radius, centre.y - radius, radius * 2.0f, radius * 2.0f);
@@ -159,10 +162,10 @@ void PlaceAudioProcessorEditor::paintVignette (juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
-    for (int i = 0; i < 20; ++i)
+    for (int i = 0; i < 12; ++i)
     {
-        float alpha = 0.08f * (static_cast<float> (i) / 20.0f);
-        float inset = static_cast<float> (i) * 8.0f;
+        float alpha = 0.05f * (static_cast<float> (i) / 12.0f);
+        float inset = static_cast<float> (i) * 12.0f;
         g.setColour (juce::Colours::black.withAlpha (alpha));
         g.drawRect (bounds.reduced (inset), 1.0f);
     }
