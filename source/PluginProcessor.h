@@ -46,7 +46,10 @@ public:
     ParameterManager& getParameterManager() { return *paramManager; }
 
     bool isSidechainActive() const noexcept { return sidechainConnected; }
+    
+    // UI Getters for Meters
     float getCurrentLevel() const noexcept { return currentLevel.load(); }
+    float getSidechainLevel() const noexcept { return sidechainLevel.load(); }
 
 private:
     std::unique_ptr<ParameterManager> paramManager;
@@ -64,7 +67,10 @@ private:
     float smoothCoeff = 0.999f;
 
     bool sidechainConnected = false;
+    
+    // Thread-safe meter levels
     std::atomic<float> currentLevel { 0.0f };
+    std::atomic<float> sidechainLevel { 0.0f };
 
     void updateSmoothing (float targetSize, float targetBass, int numSamples) noexcept;
 
