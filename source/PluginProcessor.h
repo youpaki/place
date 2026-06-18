@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <atomic>
 #include "ParameterManager.h"
 #include "dsp/MidSideProcessor.h"
 #include "dsp/StaticVoiceSpaceEQ.h"
@@ -45,6 +46,7 @@ public:
     ParameterManager& getParameterManager() { return *paramManager; }
 
     bool isSidechainActive() const noexcept { return sidechainConnected; }
+    float getCurrentLevel() const noexcept { return currentLevel.load(); }
 
 private:
     std::unique_ptr<ParameterManager> paramManager;
@@ -62,6 +64,7 @@ private:
     float smoothCoeff = 0.999f;
 
     bool sidechainConnected = false;
+    std::atomic<float> currentLevel { 0.0f };
 
     void updateSmoothing (float targetSize, float targetBass, int numSamples) noexcept;
 

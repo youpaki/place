@@ -128,6 +128,17 @@ void PlaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     }
 
     midSideProcessor.decode (buffer, numSamples);
+
+    float sumSquares = 0.0f;
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        auto* data = buffer.getReadPointer (ch);
+        for (int i = 0; i < numSamples; ++i)
+            sumSquares += data[i] * data[i];
+    }
+
+    float rms = std::sqrt (sumSquares / static_cast<float> (numSamples * buffer.getNumChannels()));
+    currentLevel.store (juce::jlimit (0.0f, 1.0f, rms));
 }
 
 void PlaceAudioProcessor::updateSmoothing (float targetSize, float targetBass, int /*numSamples*/) noexcept

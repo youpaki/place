@@ -2,18 +2,17 @@
 
 PlaceAudioProcessorEditor::PlaceAudioProcessorEditor (PlaceAudioProcessor& p)
     : AudioProcessorEditor (&p),
-      processorRef (p),
-      sizeMaximizerKnob ("SIZE MAXIMIZER", true),
-      sideBassRemoverKnob ("SIDE BASS REMOVER", false)
+      processorRef (p)
 {
     setLookAndFeel (&lookAndFeel);
     setResizable (true, true);
     setResizeLimits (480, 270, 1280, 720);
 
     addAndMakeVisible (stereoField);
-    addAndMakeVisible (sizeMaximizerKnob);
-    addAndMakeVisible (sideBassRemoverKnob);
-    addAndMakeVisible (modeSelector);
+    addAndMakeVisible (mainKnob);
+    addAndMakeVisible (sideBassKnob);
+    addAndMakeVisible (modeToggle);
+    addAndMakeVisible (meter);
 
     scIndicator.setText ("SC OFF", juce::dontSendNotification);
     scIndicator.setJustificationType (juce::Justification::centred);
@@ -21,17 +20,24 @@ PlaceAudioProcessorEditor::PlaceAudioProcessorEditor (PlaceAudioProcessor& p)
     scIndicator.setColour (juce::Label::textColourId, PlaceLookAndFeel::textDim());
     addAndMakeVisible (scIndicator);
 
-    sizeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-        processorRef.getAPVTS(), ParamIDs::SIZE_MAXIMIZER, sizeMaximizerKnob.getSlider());
+    mainKnobAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+        processorRef.getAPVTS(), ParamIDs::SIZE_MAXIMIZER, mainKnob.getSlider());
 
-    bassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-        processorRef.getAPVTS(), ParamIDs::SIDE_BASS_REMOVER, sideBassRemoverKnob.getSlider());
+    sideBassKnobAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+        processorRef.getAPVTS(), ParamIDs::SIDE_BASS_REMOVER, sideBassKnob.getSlider());
 
-    modeSelector.onModeChanged = [this](int mode)
+    modeToggle.onToggle = [this](bool isStatic)
     {
         if (auto* param = processorRef.getAPVTS().getParameter (ParamIDs::MODE))
-            param->setValueNotifyingHost (static_cast<float> (mode));
+            param->setValueNotifyingHost (isStatic ? 0.0f : 1.0f);
     };
+
+    if (auto* modeParam = processorRef.getAPVTS().getParameter (ParamIDs::MODE))
+    {
+        bool isStatic = (modeParam->getValue() < 0.5f);
+        modeToggle.isStatic = isStatic;
+        modeToggle.repaint();
+    }
 
     setSize (defaultWidth, defaultHeight);
     startTimerHz (30);
@@ -39,6 +45,8 @@ PlaceAudioProcessorEditor::PlaceAudioProcessorEditor (PlaceAudioProcessor& p)
 
 PlaceAudioProcessorEditor::~PlaceAudioProcessorEditor()
 {
+    mainKnobAttachment.reset();
+    sideBassKnobAttachment.reset();
     setLookAndFeel (nullptr);
 }
 
@@ -85,7 +93,7 @@ void PlaceAudioProcessorEditor::resized()
 
     auto centerArea = area.withSizeKeepingCentre (knobSize, knobSize + 35);
     stereoField.setBounds (centerArea.expanded (30));
-    sizeMaximizerKnob.setBounds (centerArea);
+    mainKnob.setBounds (centerArea);
 
     area.removeFromTop (centerArea.getHeight());
 
@@ -96,12 +104,15 @@ void PlaceAudioProcessorEditor::resized()
     int thirdWidth = bottomArea.getWidth() / 3;
 
     auto bassArea = bottomArea.removeFromLeft (thirdWidth);
-    sideBassRemoverKnob.setBounds (bassArea.withSizeKeepingCentre (smallKnobSize, smallKnobSize + 20));
+    sideBassKnob.setBounds (bassArea.withSizeKeepingCentre (smallKnobSize, smallKnobSize + 20));
 
     auto modeArea = bottomArea.removeFromLeft (thirdWidth);
-    modeSelector.setBounds (modeArea.withSizeKeepingCentre (juce::jmin (thirdWidth - 20, 150), 28));
+    modeToggle.setBounds (modeArea.withSizeKeepingCentre (juce::jmin (thirdWidth - 20, 150), 28));
 
-    auto scArea = bottomArea;
+    auto meterArea = bottomArea;
+    meter.setBounds (meterArea.withSizeKeepingCentre (juce::jmin (thirdWidth - 20, 120), 12));
+
+    auto scArea = meterArea.removeFromBottom (20);
     scIndicator.setBounds (scArea.withSizeKeepingCentre (60, 18));
 }
 
@@ -110,8 +121,11 @@ void PlaceAudioProcessorEditor::timerCallback()
     bool scActive = processorRef.isSidechainActive();
     scIndicator.setText (scActive ? "SC ON" : "SC OFF", juce::dontSendNotification);
 
-    float sizeVal = static_cast<float> (sizeMaximizerKnob.getSlider().getValue() / 100.0);
+    float sizeVal = static_cast<float> (mainKnob.getSlider().getValue() / 100.0);
     stereoField.setSizeAmount (sizeVal);
+
+    float level = processorRef.getCurrentLevel();
+    meter.setLevel (level);
 
     repaint();
 }
