@@ -1,131 +1,245 @@
+#include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-PlaceAudioProcessorEditor::PlaceAudioProcessorEditor (PlaceAudioProcessor& p)
-    : AudioProcessorEditor (&p),
-      processorRef (p)
+//==============================================================================
+// Custom Component Paint Methods
+//==============================================================================
+
+void MainPlaceKnob::paint(juce::Graphics& g)
 {
-    setLookAndFeel (&lookAndFeel);
-    setResizable (true, true);
-    setResizeLimits (480, 270, 1280, 720);
+    auto bounds = getLocalBounds().toFloat();
+    auto radius = (juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f) - 10.0f;
+    auto centreX = bounds.getCentreX();
+    auto centreY = bounds.getCentreY();
 
-    addAndMakeVisible (stereoField);
-    addAndMakeVisible (mainKnob);
-    addAndMakeVisible (sideBassKnob);
-    addAndMakeVisible (modeToggle);
-    addAndMakeVisible (meter);
+    g.setColour(Theme::dimPurple.withAlpha(0.3f));
+    g.drawEllipse(centreX - radius - 2, centreY - radius - 2, (radius + 2) * 2, (radius + 2) * 2, 2.0f);
 
-    scIndicator.setText ("SC OFF", juce::dontSendNotification);
-    scIndicator.setJustificationType (juce::Justification::centred);
-    scIndicator.setFont (juce::FontOptions (10.0f));
-    scIndicator.setColour (juce::Label::textColourId, PlaceLookAndFeel::textDim());
-    addAndMakeVisible (scIndicator);
+    juce::DropShadow shadow(juce::Colours::black.withAlpha(0.8f), 8, juce::Point<int>(0, 5));
+    juce::Path knobPath;
+    knobPath.addEllipse(centreX - radius, centreY - radius, radius * 2, radius * 2);
+    shadow.drawForPath(g, knobPath);
 
-    mainKnobAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-        processorRef.getAPVTS(), ParamIDs::SIZE_MAXIMIZER, mainKnob.getSlider());
+    juce::ColourGradient gradient(juce::Colour(0xff2d233d), centreX, centreY - radius,
+                                  juce::Colour(0xff0d0812), centreX, centreY + radius, false);
+    g.setGradientFill(gradient);
+    g.fillPath(knobPath);
 
-    sideBassKnobAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-        processorRef.getAPVTS(), ParamIDs::SIDE_BASS_REMOVER, sideBassKnob.getSlider());
+    g.setColour(juce::Colour(0xff3a2e4d));
+    g.drawEllipse(centreX - radius, centreY - radius, radius * 2, radius * 2, 1.5f);
 
-    modeToggle.onToggle = [this](bool isStatic)
-    {
-        if (auto* param = processorRef.getAPVTS().getParameter (ParamIDs::MODE))
-            param->setValueNotifyingHost (isStatic ? 0.0f : 1.0f);
-    };
+    // FIXED: Standard math angles (0.75pi is bottom-left (7:30), 2.25pi is bottom-right (4:30))
+    auto startAngle = juce::MathConstants<float>::pi * 0.75f;
+    auto endAngle   = juce::MathConstants<float>::pi * 2.25f;
+    auto angle = juce::jmap((float)getValue(), (float)getMinimum(), (float)getMaximum(), startAngle, endAngle);
+    
+    auto dotRadius = 4.0f;
+    auto dotDistance = radius * 0.7f;
+    auto dotX = centreX + dotDistance * std::cos(angle);
+    auto dotY = centreY + dotDistance * std::sin(angle);
 
-    if (auto* modeParam = processorRef.getAPVTS().getParameter (ParamIDs::MODE))
-    {
-        bool isStatic = (modeParam->getValue() < 0.5f);
-        modeToggle.isStatic = isStatic;
-        modeToggle.repaint();
+    g.setColour(Theme::neonPurple.withAlpha(0.5f)); 
+    g.fillEllipse(dotX - dotRadius * 2, dotY - dotRadius * 2, dotRadius * 4, dotRadius * 4);
+    g.setColour(Theme::neonPurple); 
+    g.fillEllipse(dotX - dotRadius, dotY - dotRadius, dotRadius * 2, dotRadius * 2);
+}
+
+void SideBassKnob::paint(juce::Graphics& g)
+{
+    auto bounds = getLocalBounds().toFloat();
+    auto radius = (juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f) - 6.0f;
+    auto centreX = bounds.getCentreX();
+    auto centreY = bounds.getCentreY();
+
+    // FIXED: Unified the math angles to match the Main Place Knob
+    auto mathStart = juce::MathConstants<float>::pi * 0.75f;
+    auto mathEnd   = juce::MathConstants<float>::pi * 2.25f;
+    
+    // JUCE arc drawing starts 0 at top-center, so we offset by 90 degrees (halfPi)
+    auto arcStart  = mathStart + juce::MathConstants<float>::halfPi;
+    auto arcEnd    = mathEnd + juce::MathConstants<float>::halfPi;
+
+    auto currentMathAngle = juce::jmap((float)getValue(), (float)getMinimum(), (float)getMaximum(), mathStart, mathEnd);
+    auto currentArcAngle  = currentMathAngle + juce::MathConstants<float>::halfPi;
+
+    juce::Path bgArc;
+    bgArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, arcStart, arcEnd, true);
+    g.setColour(Theme::dimPurple.withAlpha(0.3f));
+    g.strokePath(bgArc, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    juce::Path activeArc;
+    activeArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, arcStart, currentArcAngle, true);
+    g.setColour(Theme::neonPurple);
+    g.strokePath(activeArc, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    auto innerRadius = radius * 0.5f;
+    g.setColour(Theme::knobDark);
+    g.fillEllipse(centreX - innerRadius, centreY - innerRadius, innerRadius * 2, innerRadius * 2);
+    
+    auto dotX = centreX + innerRadius * 0.6f * std::cos(currentMathAngle);
+    auto dotY = centreY + innerRadius * 0.6f * std::sin(currentMathAngle);
+    g.setColour(Theme::neonPurple);
+    g.fillEllipse(dotX - 1.5f, dotY - 1.5f, 3.0f, 3.0f);
+}
+
+void PillToggle::updateAnimation()
+{
+    // Eases the dot towards 1.0 (right) or 0.0 (left)
+    float target = getToggleState() ? 1.0f : 0.0f;
+    if (std::abs(target - currentPos) > 0.001f) {
+        currentPos += (target - currentPos) * 0.15f; // Adjust 0.15f for faster/slower slide
+        repaint();
     }
+}
 
-    setSize (defaultWidth, defaultHeight);
-    startTimerHz (30);
+void PillToggle::paintButton(juce::Graphics& g, bool, bool)
+{
+    auto bounds = getLocalBounds().toFloat();
+
+    g.setColour(Theme::bgMain);
+    g.fillRoundedRectangle(bounds, bounds.getHeight() / 2.0f);
+    g.setColour(Theme::panelOutline);
+    g.drawRoundedRectangle(bounds, bounds.getHeight() / 2.0f, 1.5f);
+
+    auto thumbRadius = bounds.getHeight() / 2.0f - 2.0f;
+    auto minX = 2.0f;
+    auto maxX = bounds.getWidth() - thumbRadius * 2.0f - 2.0f;
+    
+    // NEW: Calculate position dynamically based on smoothed state
+    auto thumbX = minX + currentPos * (maxX - minX);
+    
+    g.setColour(Theme::neonPurple.withAlpha(0.3f));
+    g.fillEllipse(thumbX - 2.0f, 0.0f, thumbRadius * 2.0f + 4.0f, thumbRadius * 2.0f + 4.0f);
+    g.setColour(Theme::neonPurple); 
+    g.fillEllipse(thumbX, 2.0f, thumbRadius * 2.0f, thumbRadius * 2.0f);
+}
+
+void SegmentedMeter::paint(juce::Graphics& g)
+{
+    auto bounds = getLocalBounds().toFloat();
+    
+    g.setColour(Theme::bgMain);
+    g.fillRoundedRectangle(bounds, 4.0f);
+    g.setColour(Theme::panelOutline);
+    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+
+    int numSegments = 8;
+    float padding = 4.0f;
+    float segmentHeight = (bounds.getHeight() - (padding * (numSegments + 1))) / numSegments;
+    float segmentWidth = bounds.getWidth() - (padding * 2);
+
+    for (int i = 0; i < numSegments; ++i)
+    {
+        float y = bounds.getBottom() - padding - ((i + 1) * segmentHeight) - (i * padding);
+        float threshold = (float)(i + 1) / numSegments;
+
+        if (level >= threshold) {
+            g.setColour(Theme::neonPurple);
+            g.fillRoundedRectangle(bounds.getX() + padding, y, segmentWidth, segmentHeight, 2.0f);
+            g.setColour(Theme::neonPurple.withAlpha(0.2f)); 
+            g.fillRoundedRectangle(bounds.getX() + padding - 2, y - 2, segmentWidth + 4, segmentHeight + 4, 2.0f);
+        } else {
+            g.setColour(Theme::dimPurple.withAlpha(0.2f));
+            g.fillRoundedRectangle(bounds.getX() + padding, y, segmentWidth, segmentHeight, 2.0f);
+        }
+    }
+}
+
+void SCButton::paintButton(juce::Graphics& g, bool, bool)
+{
+    auto bounds = getLocalBounds().toFloat();
+    bool state = getToggleState();
+    auto radius = 4.0f;
+    auto centreY = bounds.getCentreY();
+    
+    if (state) {
+        g.setColour(Theme::neonPurple.withAlpha(0.4f));
+        g.fillEllipse(0, centreY - radius - 2, (radius+2)*2, (radius+2)*2);
+        g.setColour(Theme::neonPurple);
+    } else {
+        g.setColour(Theme::dimPurple.withAlpha(0.5f));
+    }
+    
+    g.fillEllipse(2, centreY - radius, radius * 2, radius * 2);
+}
+
+//==============================================================================
+// Editor Logic
+//==============================================================================
+
+PlaceAudioProcessorEditor::PlaceAudioProcessorEditor (PlaceAudioProcessor& p)
+    : AudioProcessorEditor (&p), audioProcessor (p)
+{
+    addAndMakeVisible(mainKnob);
+    addAndMakeVisible(sideBassKnob);
+    addAndMakeVisible(modeToggle);
+    addAndMakeVisible(ledMeter);
+    addAndMakeVisible(scButton);
+
+    modeToggle.onClick = [this] { repaint(); };
+
+    setSize (600, 400);
+    startTimerHz(60);
+
+    mainKnobAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.getAPVTS(), "PLACE_AMOUNT", mainKnob);
+    sideBassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.getAPVTS(), "SIDE_BASS", sideBassKnob);
+    modeToggleAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.getAPVTS(), "MODE", modeToggle);
+    scButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.getAPVTS(), "SC_ENABLE", scButton);
 }
 
 PlaceAudioProcessorEditor::~PlaceAudioProcessorEditor()
 {
-    mainKnobAttachment.reset();
-    sideBassKnobAttachment.reset();
-    setLookAndFeel (nullptr);
-}
-
-void PlaceAudioProcessorEditor::paint (juce::Graphics& g)
-{
-    auto bounds = getLocalBounds().toFloat();
-
-    juce::ColourGradient bgGrad (
-        PlaceLookAndFeel::bgTop(), bounds.getCentreX(), bounds.getY(),
-        PlaceLookAndFeel::bgBottom(), bounds.getCentreX(), bounds.getBottom(),
-        false);
-    g.setGradientFill (bgGrad);
-    g.fillAll();
-
-    g.setColour (PlaceLookAndFeel::textPrimary());
-    g.setFont (juce::FontOptions (22.0f));
-    g.drawFittedText ("P L A C E", getLocalBounds().removeFromTop (42), juce::Justification::centred, 1);
-
-    g.setColour (PlaceLookAndFeel::textSecondary());
-    g.setFont (juce::FontOptions (11.0f));
-    g.drawFittedText ("by leve", getLocalBounds().removeFromTop (22).removeFromTop (12),
-                      juce::Justification::centred, 1);
-
-    bool scActive = processorRef.isSidechainActive();
-    auto scBounds = scIndicator.getBoundsInParent().toFloat();
-    auto dotBounds = juce::Rectangle<float> (scBounds.getX() - 10.0f, scBounds.getCentreY() - 2.5f, 5.0f, 5.0f);
-
-    g.setColour (scActive ? PlaceLookAndFeel::cyan() : PlaceLookAndFeel::textDim());
-    g.fillEllipse (dotBounds);
-
-    g.setColour (PlaceLookAndFeel::textDim());
-    g.setFont (juce::FontOptions (9.0f));
-    g.drawFittedText ("v1.0", getLocalBounds().removeFromBottom (16).removeFromRight (45),
-                      juce::Justification::centredRight, 1);
-}
-
-void PlaceAudioProcessorEditor::resized()
-{
-    auto area = getLocalBounds();
-    area.removeFromTop (55);
-
-    int knobSize = juce::jmin (area.getWidth() / 2, area.getHeight() / 2);
-    knobSize = juce::jmax (knobSize, 100);
-
-    auto centerArea = area.withSizeKeepingCentre (knobSize, knobSize + 35);
-    stereoField.setBounds (centerArea.expanded (30));
-    mainKnob.setBounds (centerArea);
-
-    area.removeFromTop (centerArea.getHeight());
-
-    int smallKnobSize = juce::jmax (knobSize / 3, 55);
-    int bottomHeight = juce::jmax (smallKnobSize + 25, 70);
-    auto bottomArea = area.removeFromBottom (bottomHeight);
-
-    int thirdWidth = bottomArea.getWidth() / 3;
-
-    auto bassArea = bottomArea.removeFromLeft (thirdWidth);
-    sideBassKnob.setBounds (bassArea.withSizeKeepingCentre (smallKnobSize, smallKnobSize + 20));
-
-    auto modeArea = bottomArea.removeFromLeft (thirdWidth);
-    modeToggle.setBounds (modeArea.withSizeKeepingCentre (juce::jmin (thirdWidth - 20, 150), 28));
-
-    auto meterArea = bottomArea;
-    meter.setBounds (meterArea.withSizeKeepingCentre (juce::jmin (thirdWidth - 20, 120), 12));
-
-    auto scArea = meterArea.removeFromBottom (20);
-    scIndicator.setBounds (scArea.withSizeKeepingCentre (60, 18));
+    stopTimer();
 }
 
 void PlaceAudioProcessorEditor::timerCallback()
 {
-    bool scActive = processorRef.isSidechainActive();
-    scIndicator.setText (scActive ? "SC ON" : "SC OFF", juce::dontSendNotification);
+    ledMeter.setLevel(audioProcessor.getCurrentLevel()); 
+    modeToggle.updateAnimation(); // Animate the toggle switch dot
+}
 
-    float sizeVal = static_cast<float> (mainKnob.getSlider().getValue() / 100.0);
-    stereoField.setSizeAmount (sizeVal);
+void PlaceAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    g.fillAll (Theme::bgMain);
+    auto panelBounds = getLocalBounds().toFloat().reduced(15.0f);
+    g.setColour(Theme::bgPanel);
+    g.fillRoundedRectangle(panelBounds, 8.0f);
+    g.setColour(Theme::panelOutline);
+    g.drawRoundedRectangle(panelBounds, 8.0f, 1.5f);
 
-    float level = processorRef.getCurrentLevel();
-    meter.setLevel (level);
+    g.setFont(juce::Font("Helvetica", 16.0f, juce::Font::bold).withExtraKerningFactor(0.2f));
 
-    repaint();
+    g.setColour(Theme::textLight);
+    g.drawText("P L A C E", 0, 25, getWidth(), 30, juce::Justification::centred, true);
+    
+    g.setFont(juce::Font("Helvetica", 11.0f, juce::Font::plain).withExtraKerningFactor(0.1f));
+    g.setColour(Theme::dimPurple);
+    
+    // FIXED: "by leve" replacement
+    g.drawText("by leve", getWidth() - 90, 30, 80, 20, juce::Justification::left, true);
+    
+    g.drawText("P L A C E", mainKnob.getX(), mainKnob.getBottom() + 15, mainKnob.getWidth(), 20, juce::Justification::centred, true);
+    g.drawText("SIDE BASS\nREMOVER", sideBassKnob.getX() - 20, sideBassKnob.getBottom() + 10, sideBassKnob.getWidth() + 40, 30, juce::Justification::centred, true);
+
+    if (!modeToggle.getToggleState()) g.setColour(Theme::neonPurple); else g.setColour(Theme::dimPurple);
+    g.drawText("STATIC", modeToggle.getX() - 60, modeToggle.getY(), 50, modeToggle.getHeight(), juce::Justification::centredRight, true);
+    
+    if (modeToggle.getToggleState()) g.setColour(Theme::neonPurple); else g.setColour(Theme::dimPurple);
+    g.drawText("VOCAL FOLLOW", modeToggle.getRight() + 10, modeToggle.getY(), 100, modeToggle.getHeight(), juce::Justification::centredLeft, true);
+
+    g.setColour(Theme::dimPurple);
+    g.drawText("SC", scButton.getX() + 16, scButton.getY(), 30, scButton.getHeight(), juce::Justification::centredLeft, true);
+    
+    // FIXED: Adjusted coordinates so v1.0.1 sits fully inside the frame
+    g.drawText("v1.0.1", getWidth() - 75, getHeight() - 35, 60, 20, juce::Justification::centredRight, true);
+}
+
+void PlaceAudioProcessorEditor::resized()
+{
+    mainKnob.setBounds(getLocalBounds().withSizeKeepingCentre(150, 150).withY(90));
+    sideBassKnob.setBounds(60, 210, 50, 50);
+    modeToggle.setBounds(getLocalBounds().withSizeKeepingCentre(44, 20).withY(295));
+    
+    ledMeter.setBounds(getWidth() - 90, 190, 24, 80);
+    scButton.setBounds(getWidth() - 90, 285, 40, 20);
 }
