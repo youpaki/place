@@ -5,10 +5,7 @@
 #include "ParameterManager.h"
 #include "dsp/MidSideProcessor.h"
 #include "dsp/StaticVoiceSpaceEQ.h"
-#include "dsp/DynamicVoiceSpaceEQ.h"
-#include "dsp/SideCompensationEQ.h"
-#include "dsp/MidHighPassFilter.h"
-#include "dsp/SidechainDetector.h"
+#include "dsp/SideHighPassFilter.h"
 
 class PlaceAudioProcessor : public juce::AudioProcessor
 {
@@ -45,11 +42,7 @@ public:
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
     ParameterManager& getParameterManager() { return *paramManager; }
 
-    bool isSidechainActive() const noexcept { return sidechainConnected; }
-    
-    // UI Getters for Meters
     float getCurrentLevel() const noexcept { return currentLevel.load(); }
-    float getSidechainLevel() const noexcept { return sidechainLevel.load(); }
 
 private:
     std::unique_ptr<ParameterManager> paramManager;
@@ -57,22 +50,9 @@ private:
 
     MidSideProcessor midSideProcessor;
     StaticVoiceSpaceEQ staticEQ;
-    DynamicVoiceSpaceEQ dynamicEQ;
-    SideCompensationEQ sideCompensation;
-    MidHighPassFilter midHighPass;
-    SidechainDetector sidechainDetector;
+    SideHighPassFilter sideHighPass;
 
-    float smoothedSize = 0.0f;
-    float smoothedBass = 0.0f;
-    float smoothCoeff = 0.999f;
-
-    bool sidechainConnected = false;
-    
-    // Thread-safe meter levels
     std::atomic<float> currentLevel { 0.0f };
-    std::atomic<float> sidechainLevel { 0.0f };
-
-    void updateSmoothing (float targetSize, float targetBass, int numSamples) noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaceAudioProcessor)
 };
