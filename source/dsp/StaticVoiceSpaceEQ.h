@@ -44,7 +44,7 @@ public:
     }
 
 private:
-    static constexpr size_t numBands = 6;
+    static constexpr size_t numBands = 7;
 
     struct BiquadCoeffs
     {
@@ -56,9 +56,9 @@ private:
         float x1 = 0.0f, x2 = 0.0f, y1 = 0.0f, y2 = 0.0f;
     };
 
-    static constexpr std::array<float, numBands> bandFreqs = { 250.0f, 500.0f, 1000.0f, 2500.0f, 5000.0f, 8000.0f };
-    static constexpr std::array<float, numBands> maxAttenDB = { -3.0f, -6.0f, -8.0f, -12.0f, -10.0f, -8.0f };
-    static constexpr std::array<float, numBands> qValues = { 1.0f, 1.2f, 1.4f, 1.5f, 1.2f, 1.0f };
+    static constexpr std::array<float, numBands> bandFreqs = { 250.0f, 500.0f, 1000.0f, 2500.0f, 5000.0f, 8000.0f, 12000.0f };
+    static constexpr std::array<float, numBands> maxAttenDB = { -3.0f, -6.0f, -8.0f, -12.0f, -10.0f, -8.0f, -4.0f };
+    static constexpr std::array<float, numBands> qValues = { 1.0f, 1.2f, 1.4f, 1.5f, 1.2f, 1.0f, 0.7f };
 
     std::array<BiquadCoeffs, numBands> coeffs;
     std::array<BiquadState, numBands> filterStates;
@@ -85,11 +85,14 @@ private:
         if (amount >= 0.0f)
             currentAmount = amount;
 
-        for (size_t i = 0; i < numBands; ++i)
+        for (size_t i = 0; i < numBands - 1; ++i)
         {
             float gainDB = maxAttenDB[i] * currentAmount;
             coeffs[i] = calcPeakingEQ (static_cast<float> (sampleRate), bandFreqs[i], qValues[i], gainDB);
         }
+
+        float shelfGainDB = maxAttenDB[numBands - 1] * currentAmount;
+        coeffs[numBands - 1] = calcHighShelf (static_cast<float> (sampleRate), bandFreqs[numBands - 1], shelfGainDB);
     }
 
     static BiquadCoeffs calcPeakingEQ (float fs, float freq, float Q, float gainDB)
@@ -116,6 +119,34 @@ private:
         c.b2 = (1.0f - alpha * A) * invA0;
         c.a1 = (-2.0f * cosW0) * invA0;
         c.a2 = (1.0f - alpha / A) * invA0;
+
+        return c;
+    }
+
+    static BiquadCoeffs calcHighShelf (float fs, float freq, float gainDB)
+    {
+        BiquadCoeffs c;
+
+        if (std::abs (gainDB) < 0.001f)
+        {
+            c = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+            return c;
+        }
+
+        float A = std::pow (10.0f, gainDB / 40.0f);
+        float w0 = 2.0f * juce::MathConstants<float>::pi * freq / fs;
+        float sinW0 = std::sin (w0);
+        float cosW0 = std::cos (w0);
+        float alpha = sinW0 / 2.0f * std::sqrt ((A + 1.0f / A) * 2.0f);
+
+        float a0 = (A + 1.0f) + (A - 1.0f) * cosW0 + 2.0f * std::sqrt (A) * alpha;
+        float invA0 = 1.0f / a0;
+
+        c.b0 = A * ((A + 1.0f) + (A - 1.0f) * cosW0 + 2.0f * std::sqrt (A) * alpha) * invA0;
+        c.b1 = -2.0f * A * ((A - 1.0f) + (A + 1.0f) * cosW0) * invA0;
+        c.b2 = A * ((A + 1.0f) + (A - 1.0f) * cosW0 - 2.0f * std::sqrt (A) * alpha) * invA0;
+        c.a1 = 2.0f * ((A - 1.0f) - (A + 1.0f) * cosW0) * invA0;
+        c.a2 = ((A + 1.0f) - (A - 1.0f) * cosW0 - 2.0f * std::sqrt (A) * alpha) * invA0;
 
         return c;
     }

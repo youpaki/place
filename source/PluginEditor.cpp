@@ -112,11 +112,11 @@ void PlaceAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawText("v1.0.3",  getWidth() - 100, getHeight() - 40, 80, 20, juce::Justification::right, true);
 
     g.drawText("P L A C E", mainKnob.getX(), mainKnob.getBottom() + 10, mainKnob.getWidth(), 20, juce::Justification::centred, true);
-    g.drawText("SIDE BASS", sideBassKnob.getX() - 20, sideBassKnob.getBottom() + 8, sideBassKnob.getWidth() + 40, 20, juce::Justification::centred, true);
+    g.drawText("SIDE BASS", sideBassKnob.getX() - 10, sideBassKnob.getBottom() + 8, sideBassKnob.getWidth() + 20, 20, juce::Justification::centred, true);
 }
 
 void PlaceAudioProcessorEditor::resized()
 {
     mainKnob.setBounds(getLocalBounds().withSizeKeepingCentre(150, 150).withY(70));
-    sideBassKnob.setBounds(getLocalBounds().withSizeKeepingCentre(60, 60).withY(250));
+    sideBassKnob.setBounds(40, 250, 60, 60);
 }
