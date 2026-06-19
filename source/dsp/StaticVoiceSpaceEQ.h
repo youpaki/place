@@ -57,7 +57,7 @@ private:
     };
 
     static constexpr std::array<float, numBands> bandFreqs = { 250.0f, 500.0f, 1000.0f, 2500.0f, 5000.0f, 8000.0f, 12000.0f };
-    static constexpr std::array<float, numBands> maxAttenDB = { -3.0f, -6.0f, -8.0f, -12.0f, -10.0f, -8.0f, -4.0f };
+    static constexpr std::array<float, numBands> maxAttenDB = { -3.0f, -6.0f, -8.0f, -12.0f, -10.0f, -8.0f, -7.0f };
     static constexpr std::array<float, numBands> qValues = { 1.0f, 1.2f, 1.4f, 1.5f, 1.2f, 1.0f, 0.7f };
 
     std::array<BiquadCoeffs, numBands> coeffs;
